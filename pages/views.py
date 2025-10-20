@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, HttpResponse
 from django.contrib import messages
-from pages.forms import PostForm
-from pages.models import Post
+from pages.forms import PostForm, CommentForm
+from pages.models import Post, Comment
+from django.views.decorators.http import require_http_methods
 
 # Create your views here.
 def home(request):
@@ -48,9 +49,25 @@ def post_create(request):
     return render(request, 'post_form.html', {'form': form})
 
 def post_view(request, pk):
-    # post = get_object_or_404(Post, pk=pk)
     post = Post.objects.get(pk=pk)
-    return render(request, 'post_view.html', {'post': post})
+    post = get_object_or_404(Post, pk=pk)
+
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.post = post
+            comment.save()
+            messages.success(request, "Your comment was added.")
+
+            return redirect('post_view', pk=post.pk)
+        else:
+            messages.error(request, "Please fix the comment errors below.")
+    else:
+        form = CommentForm()
+
+    return render(request, 'post_view.html', {'post': post, 'comment_form': form})
+
 
 def post_update(request, pk):
     post = get_object_or_404(Post, pk=pk)
@@ -73,3 +90,6 @@ def post_delete(request, pk):
         messages.success(request, f"Post `{post.title}` was deleted")
         return redirect('post_list')
     return render(request, 'post_confirm_delete.html', {'post': post})
+
+def csrf_failure_view(request, reason=""):
+    return render(request, '403_csrf.html', {'reason': reason}, status=403)

@@ -10,13 +10,46 @@
  
  <p>{{ post.body }}</p>
  
-   <h4>Comments ({{ post.comments.count }})</h4>
-   <ul>
-      {% for comment in post.comments.all %}
-         <li><strong>{{ comment.author }}:</strong> {{ comment.text }} | {{ comment.created_at|timesince}} ago.</li>
-      {% empty %}
-         <li>No comment yet.</li>
-      {% endfor %}
-   </ul>  
- 
+ <h4>Comments ({{ post.comments.count }})</h4>
+ <ul>
+    {% for comment in post.comments.all %}
+       <li><strong>{{ comment.author }}:</strong> {{ comment.text }} | {{ comment.created_at|timesince}} ago.</li>
+    {% empty %}
+       <li>No comment yet.</li>
+    {% endfor %}
+ </ul>
+
+ <hr>
+
+ <h4>Add a comment</h4>
+
+ {# Non-field / form-level errors #}
+ {% if comment_form.non_field_errors %}
+   <div class="form-nonfield-errors">
+     {{ comment_form.non_field_errors }}
+   </div>
+ {% endif %}
+
+ <form method="post" action="{% url 'post_view' post.pk %}">
+   {% csrf_token %}
+
+   <div class="form-row {% if comment_form.author.errors %}field-error{% endif %}">
+     <label for="{{ comment_form.author.id_for_label }}">Name</label><br>
+     {{ comment_form.author }}
+     {% for err in comment_form.author.errors %}
+       <div class="field-error-text">{{ err }}</div>
+     {% endfor %}
+   </div>
+
+   <div class="form-row {% if comment_form.text.errors %}field-error{% endif %}">
+     <label for="{{ comment_form.text.id_for_label }}">Comment</label><br>
+     {{ comment_form.text }}
+     {% for err in comment_form.text.errors %}
+       <div class="field-error-text">{{ err }}</div>
+     {% endfor %}
+   </div>
+
+   <button type="submit">Post comment</button>
+ </form>
+
 {% endblock %}
