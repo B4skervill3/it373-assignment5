@@ -37,16 +37,36 @@ def post_list(request):
     return render(request, 'post_list.html', context)
 
 def post_create(request):
-    if request.method == 'POST':
-        form = PostForm(request.POST)
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES or None)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'New post created')
-            return redirect('post_list')
-        messages.error(request, 'Please correct the errors below.')
+            try:
+                post = form.save(commit=False)
+
+                if hasattr(post, 'author') and (getattr(post, 'author', None) in (None, '') or not post.author_id if hasattr(post, 'author_id') else False):
+                    try:
+                        if request.user and request.user.is_authenticated:
+                            post.author = request.user
+                    except Exception:
+                        pass
+
+                post.save()
+                form.save_m2m() if hasattr(form, 'save_m2m') else None
+
+                messages.success(request, "Post created.")
+                return redirect('post_list')
+            except Exception as e:
+                messages.error(request, "Server error while saving post. See console for details.")
+                import traceback, sys
+                print("Error saving Post in post_create:", file=sys.stderr)
+                traceback.print_exc()
+                return render(request, 'post_create.html', {'form': form})
+        else:
+            messages.error(request, "Please correct the errors below.")
     else:
         form = PostForm()
-    return render(request, 'post_form.html', {'form': form})
+
+    return render(request, 'post_create.html', {'form': form})
 
 def post_view(request, pk):
     post = Post.objects.get(pk=pk)
